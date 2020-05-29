@@ -8,16 +8,16 @@ import hashlib
 #import os
 from binascii import hexlify, unhexlify
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from rdrand import RdRandom
 
 BYTE_DISPLAY_SIZE = 8
-RANDOM_SOURCE = RdRandom()
 
 def derive_key(passphrase: str, salt: bytes = None) -> [str, bytes]:
     """converts a passphrase into a key by using or generating a salt."""
     if salt is None:
+        rand_source = open("/dev/random", 'rb')
         #salt = os.urandom(8)
-        salt = RANDOM_SOURCE.getrandbytes(8)
+        salt = rand_source.read(8)
+        rand_source.close()
     return hashlib.pbkdf2_hmac("sha256", passphrase.encode("utf8"), salt, 1000), salt
 
 
@@ -25,8 +25,10 @@ def encrypt(passphrase: str, plaintext: str) -> str:
     """encrypts plaintext data using the user supplied passphrase."""
     key, salt = derive_key(passphrase)
     aes = AESGCM(key)
+    rand_source = open("/dev/random", 'rb')
     #initialization_vector = os.urandom(12)
-    initialization_vector = RANDOM_SOURCE.getrandbytes(12)
+    initialization_vector = rand_source.read(12)
+    rand_source.close()
     iv_hexstring = hexlify(initialization_vector).decode("utf8")
     iv_chunks = [iv_hexstring[a: a + BYTE_DISPLAY_SIZE * 2] for a in range(0, len(iv_hexstring), \
             BYTE_DISPLAY_SIZE * 2)]
